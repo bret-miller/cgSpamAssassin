@@ -1,0 +1,26 @@
+SpamAssassin, including spamc and spamd should be installed prior to using this
+interface. Requires Perl and Time::HiRes. Tested with ActivePerl 5.20.
+
+Tested with SpamAssassin for Windows by JAM Software.
+
+Installing the basic interface:
+1. Copy cgSpamAssassin.pl and cgSpamAssassin.conf to your CommuniGate Pro base
+   directory.
+2. Edit cgSpamAssassin.conf with your environment-specific settings.
+3. Create a helper definition. I called mine SpamAssassin. Set the program path
+   to the path to cgSpamAssassin.pl. On Windows, you must call perl with the 
+   script as the parameter: c:\perl\bin\perl.exe cgSpamAssassin.pl
+   I suggest you use "all info" for the log level at first. You can elminate
+   logging later if you choose.
+4. Create a mail rule to EXTFILTER SpamAssassin your messages.
+5. Create a mail rule to store and drop messages tagged as spam.
+
+Using the CheckClamd tool for Windows:
+1. Copy the entire CheckClamd directory under your SpamAssassin program 
+   directory. If you don't use the default IP (127.0.0.1) and port, edit
+   the CheckClamd.cmd and adjust it to use your custom IP and port.
+2. Create a scheduled task to run CheckClamd with the SpamAssassin program
+   directory as the working directory. I run mine every 5 minutes. It pings
+   the clamd service to make sure the IP and port are responding. If not, it
+   kills the clamd process and restarts it.
+
