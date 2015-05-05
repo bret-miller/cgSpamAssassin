@@ -1,7 +1,8 @@
-#!/usr/bin/perl -w
 ################################################################################
 # cgSpamAssassin.pl - SpamAssassin spamc interface for CommuniGate Pro
 ################################################################################
+# 2015-05-04 0.0.4  Initial release
+# 2015-05-05 0.0.5  Spamc error kills helper so spam doesn't leak through
 
 # Get configuration
 use strict;
@@ -12,7 +13,7 @@ use File::Basename;
 use Time::HiRes qw(time);
 $| = 1;
 
-my $ver = '0.0.4';
+my $ver = '0.0.5';
 
 our %config;
 $config{cfgFile}=abs_path(dirname(__FILE__))."/cgSpamAssassin.conf";
@@ -51,6 +52,8 @@ if ( ! -e "$config{tempdir}" ) {
 # Main Processing Loop
 my %pids;
 my $pid;
+my $parentpid=$$;
+$SIG{INT} = sub { die "SpamAssassin Error" };
 
 while (<>)
  {
@@ -142,7 +145,7 @@ sub processMessage {
 	close(MSG);
 	close(WTR);
 
-	my $pid=open(RDR,"\"$config{saSpamc}\" --headers <$tempfile |");
+	my $pid=open(RDR,"\"$config{saSpamc}\" --headers -x<$tempfile |");
 
 	
 	#print "-------------------------------------------------------------------------------\n";
@@ -163,7 +166,7 @@ sub processMessage {
 	}
 	
 	close(RDR);
-	my $xcode=$?;
+	my $xcode=$?; #Get spamc exit code
 	unlink $tempfile;
 	
 	#print "-------------------------------------------------------------------------------\n";
@@ -181,12 +184,17 @@ sub processMessage {
 #		$saheaders = substr $saheaders, 0, $l-1;
 #	}
 	
-	# Clean up the spamc process (also gets exit code)
+	# Clean up the spamc process
 	waitpid($pid, &WNOHANG);
 	my $isspam=$xcode==0 ? "not spam" : "spam";
-
 	my $etime=time;
 	my $dtime=$etime - $stime;
+	if ($xcode gt 1) { # spamassassin error just die so messages don't skate by unscanned
+		my $errmsg = sprintf("SpamAssassin error in %.1f seconds, exit code $?", $dtime);
+		print "* $reqid $errmsg\n";
+		kill KILL => $parentpid;
+		die "$errmsg";
+	}
 	printf "* $reqid identified $isspam in %.1f seconds, exit code $?\n", $dtime;
 	my $saheadertxt=join "\\e", @saheaders;
 

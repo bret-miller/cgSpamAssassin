@@ -5,7 +5,7 @@ CD \SpamAssassin
 
 REM *** Uses standard spamd IP and port settings
 CheckSpamd\t4eportping 127.0.0.1 783
-if errorlevel 0 goto done
+IF "%ERRORLEVEL%"=="0" goto done
 
 :startit
 echo Starting spamd...
