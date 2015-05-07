@@ -3,6 +3,7 @@
 ################################################################################
 # 2015-05-04 0.0.4  Initial release
 # 2015-05-05 0.0.5  Spamc error kills helper so spam doesn't leak through
+# 2015-05-05 0.0.5  Fix spamc exit code handling
 
 # Get configuration
 use strict;
@@ -13,7 +14,7 @@ use File::Basename;
 use Time::HiRes qw(time);
 $| = 1;
 
-my $ver = '0.0.5';
+my $ver = '0.0.6';
 
 our %config;
 $config{cfgFile}=abs_path(dirname(__FILE__))."/cgSpamAssassin.conf";
@@ -145,7 +146,7 @@ sub processMessage {
 	close(MSG);
 	close(WTR);
 
-	my $pid=open(RDR,"\"$config{saSpamc}\" --headers -x<$tempfile |");
+	my $pid=open(RDR,"\"$config{saSpamc}\" --headers -x -E<$tempfile |");
 
 	
 	#print "-------------------------------------------------------------------------------\n";
@@ -166,7 +167,8 @@ sub processMessage {
 	}
 	
 	close(RDR);
-	my $xcode=$?; #Get spamc exit code
+	#my $xcode=$?; #Get spamc exit code
+	my $xcode=${^CHILD_ERROR_NATIVE}>>8; # Get spamc exit code
 	unlink $tempfile;
 	
 	#print "-------------------------------------------------------------------------------\n";
@@ -195,7 +197,7 @@ sub processMessage {
 		kill KILL => $parentpid;
 		die "$errmsg";
 	}
-	printf "* $reqid identified $isspam in %.1f seconds, exit code $?\n", $dtime;
+	printf "* $reqid identified $isspam in %.1f seconds, exit code $xcode\n", $dtime;
 	my $saheadertxt=join "\\e", @saheaders;
 
 	print "$reqid ADDHEADER \"$saheadertxt\"\n";
